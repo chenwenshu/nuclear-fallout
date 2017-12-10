@@ -1,0 +1,87 @@
+module player_getter (
+    input clk,  // clock
+    input rst,  // reset
+    input button_firstdigit,
+    input button_seconddigit,
+    input button_confirmation,
+    //input memory_setternumber,
+    input round_number[3],
+    
+    output first_digit[4],
+    output second_digit[4],
+    output out[8],
+    output done
+    
+  ) {
+  
+  .clk(clk){
+     edge_detector edge_detector(#RISE(1), #FALL(0));
+     button_conditioner button_cond;
+     edge_detector edge_detector2(#RISE(1), #FALL(0));
+     button_conditioner button_cond2;
+     edge_detector edge_detector3(#RISE(1), #FALL(0));
+     button_conditioner button_cond3;
+    .rst(rst) {
+
+    dff fdd[4];     // value storage
+    dff sdd[4];
+    dff ddd[1];
+    }
+  }
+  always {     
+      first_digit = fdd.q;
+      second_digit = sdd.q;
+      done = ddd.q;
+      out = 0;
+      //button setup
+      button_cond.in = button_firstdigit;
+      edge_detector.in = button_cond.out;
+      button_cond2.in = button_seconddigit;
+      edge_detector2.in = button_cond2.out;
+      button_cond3.in = button_confirmation;
+      edge_detector3.in = button_cond3.out;
+      //
+      if (!edge_detector3.out){
+        if(round_number==0){
+          fdd.d = 0;
+          sdd.d = 0;
+          ddd.d = 0;     
+        }
+        
+        if(round_number>=1){ // if its in the first round
+          if (edge_detector.out){            
+              if (fdd.q == 9)        
+                fdd.d = 0;
+              else{          
+                fdd.d = fdd.q + 1;         
+              }
+          }
+          if (edge_detector2.out){
+             if (sdd.q == 9)        
+                sdd.d = 0;
+             else{          
+                sdd.d = sdd.q + 1;
+              }
+          }
+          out = fdd.q*10 + sdd.q;
+          
+      }
+          //else{ //if its not in the first round 
+      //    if (button_firstdigit){
+          //        if(memory_setternumber<97)
+        //        out = memory_setternumber + 2;
+          //    }
+         // if (button_seconddigit){                       
+           //     out = memory_setternumber - 2;
+             // }          
+  //}
+    }else{ //if confirmed finish prompting in
+        if(ddd.q>1){
+          ddd.d=0;
+      }
+          ddd.d = ddd.q+1;
+        }
+}
+}
+  
+

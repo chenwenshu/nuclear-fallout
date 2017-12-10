@@ -1,0 +1,58 @@
+module alu (
+    input clk,  // clock
+    input rst,  // reset
+    input alufn[6],
+    input a[8],  
+    input b[8],
+    output s[8],
+    output z,
+    output v,
+    output n
+  ) {
+  
+  adder_8bit adder;
+  comparator_8bit compare;
+  boolean_8bit boolean;
+  shifter_8bit shifter;
+  
+
+  always {
+    adder.a = a;
+    adder.b = b;
+    adder.alufn = alufn;
+    
+    compare.v = adder.v;
+    compare.n = adder.n;
+    compare.z = adder.z;
+    compare.alufn = alufn;
+    
+    boolean.a = a;
+    boolean.b = b;
+    boolean.alufn = alufn;
+    
+    shifter.a = a;
+    shifter.b = b;
+    shifter.alufn = alufn;
+    
+    z = adder.z;
+    n = adder.n;
+    v = adder.v;
+    
+    case(alufn[5:4]){
+      b00:
+      s = adder.out;  
+      b01:
+      s = boolean.out; 
+      b10:
+      s = shifter.out; 
+      b11:
+      s = compare.out;
+      default:
+      s = 8b0;
+  }
+    
+    
+    
+    
+  }
+}

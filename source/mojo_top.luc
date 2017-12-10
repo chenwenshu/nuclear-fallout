@@ -1,0 +1,193 @@
+module mojo_top (
+    input clk,              // 50MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input cclk,             // configuration clock, AVR ready when high
+    output spi_miso,        // AVR SPI MISO
+    input spi_ss,           // AVR SPI Slave Select
+    input spi_mosi,         // AVR SPI MOSI
+    input spi_sck,          // AVR SPI Clock
+    output spi_channel [4], // AVR general purpose pins (used by default to select ADC channel)
+    input avr_tx,           // AVR TX (FPGA RX)
+    output avr_rx,          // AVR RX (FPGA TX)
+    input avr_rx_busy,      // AVR RX buffer full
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_seg [8],      // 7-segment LEDs on IO Shield
+    output io_sel [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8],  // DIP switches on IO Shield
+    input button1,
+   // output button2,
+    input button3,
+    //output button4,
+    input button5,
+    //output button6,
+    input button7,
+  //  output button8,
+    input button9,
+ //   output button10,
+    input button11,
+   // output button12
+    input button13
+  
+    
+  ) {
+  
+  sig rst;                  // reset signal
+  sig alufn[6];
+  //sig player1prompt[8];
+  //sig player2prompt[8];
+  
+  .clk(clk) {
+     edge_detector edge_detector(#RISE(1), #FALL(0));
+     button_conditioner button_cond;
+
+    .rst(rst){   
+       //dff player1prompt[8];
+       //dff player2prompt[8];
+       dff round[3];
+      // dff oldbutton;
+      // dff newbutton;
+    }
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+      
+  }
+  
+  fsm getstate(.clk(clk), .rst(rst)) = {START, PLAY,COMPARE};
+  
+  player_setter player1;
+  player_getter player2;
+  //alu alu;
+  
+  always {
+  
+    
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    
+    led = 8h00;            // turn LEDs off
+    spi_miso = bz;          // not using SPI
+    spi_channel = bzzzz;    // not using flags
+    avr_rx = bz;            // not using serial port
+    
+    io_led = 3x{{8h00}};    // turn LEDs off
+    io_seg = 8hff;          // turn segments off
+    io_sel = 4hf;           // select no digits
+
+    
+    player1.rst = rst;
+    player1.clk = clk;
+    player2.rst = rst;
+    player2.clk = clk;
+
+  //  oldbutton.d = button13;
+  //  newbutton.d = ~button13&oldbutton.q;
+    
+    
+    //player1 (SETTER)
+   // player1prompt = player1.out;
+    player1.button_firstdigit = button1;
+    player1.button_seconddigit = button3;
+    player1.button_confirmation = button5;
+    player1.round_number = round.q;
+    player1.button_start = button13;
+    
+ // player1.memory_setternumber = player1prompt;
+    
+    io_led[1] = player1.out;
+    
+    
+    //player2 (GETTER)
+    //player2prompt = player2.out;
+    player2.button_firstdigit = button7;
+    player2.button_seconddigit = button9;
+    player2.button_confirmation = button11;
+    player2.round_number = round.q;
+    
+    io_led[2] = player2.out;
+   
+    //number of round
+    //led[0] = button13;
+    
+    //compare
+    io_led[0] = round.q;
+    
+   //io_led[0] = round.q;
+    
+    
+    
+
+    
+    
+    button_cond.in = player2.done;
+    edge_detector.in = button_cond.out;
+    
+    case(getstate.q) {
+      getstate.START:
+        led[0] = 1;
+        led[7] = 1;
+        led[6] = 1;
+        led[5] = 1;
+        led[4] = 1;
+        led[3] = 1;
+        led[2] = 1;
+        led[1] = 1;
+        round.d = 0;
+         
+        if(player1.startgame){
+          round.d = round.q + 1;
+          getstate.d = getstate.PLAY;
+        }
+      getstate.PLAY:
+        led[7] = player1.done;
+        led[2] = player1.done; //confirm player1
+        led[0] = player2.done; //confirm player2
+     //  led[7] = ~player1.done; // player1's turn indicator
+     //   led[6] = player1.done; // player2's turn indicator
+      //if(player1.done){
+           //player2's turn indicator
+        //led[6]= player1.done;aaa
+      //}
+     // if(player2.done){
+           //player2's turn indicator
+        if(player1.done){
+          //d[7] =~player1.done;
+        }
+      //}
+        
+        if(player1.startgame){
+          led = 8h00; 
+          io_led = 3x{{8h00}};
+          getstate.d = getstate.START;
+        }
+        if(edge_detector.out){
+          if(round.q==7){
+            getstate.d=getstate.START;
+          }else{
+            round.d = round.q + 1;
+          }
+        }
+        if(player1.done&player2.done){
+          if(player1.out == player2.out){ // SAME
+            led = 8h00; 
+            io_led = 3x{{8h00}};
+            getstate.d = getstate.START;
+          }
+          if(player1.out > player2.out){ // TOO SMALL
+            led[3] = 0;
+            led[1] = 1;
+            led[5] = 0;
+          }
+          if(player1.out < player2.out){ // TOO BIG
+            led[3] = 0;
+            led[1] = 0;
+            led[5] = 1;
+          }
+        }        
+    }
+  }
+}
+  
+

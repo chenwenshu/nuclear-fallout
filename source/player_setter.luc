@@ -1,0 +1,116 @@
+module player_setter (
+    input clk,  // clock
+    input rst,  // reset
+    input button_firstdigit,
+    input button_seconddigit,
+    input button_confirmation,
+    input button_start,
+   // input memory_setternumber[8],
+    input round_number[3],
+    
+    output first_digit[4],
+    output second_digit[4],
+    output out[8],
+    output startgame,
+    output done
+    
+  ) {
+  
+  .clk(clk){
+     edge_detector edge_detector(#RISE(1), #FALL(0));
+     button_conditioner button_cond;
+     edge_detector edge_detector2(#RISE(1), #FALL(0));
+     button_conditioner button_cond2;
+     edge_detector edge_detector3(#RISE(1), #FALL(0));
+     button_conditioner button_cond3;
+     edge_detector edge_detector4(#RISE(1), #FALL(0));
+     button_conditioner button_cond4;
+    .rst(rst) {
+
+    dff fd[4];     // value storage
+    dff sd[4];
+    dff dd[1];
+    }
+  }
+  always {     
+      first_digit = fd.q;
+      second_digit = sd.q;
+      done = dd.q;
+      out = 0;
+      startgame = edge_detector4.out;
+    
+      //button setup
+      button_cond.in = button_firstdigit;
+      edge_detector.in = button_cond.out;
+      button_cond2.in = button_seconddigit;
+      edge_detector2.in = button_cond2.out;
+      button_cond3.in = button_confirmation;
+      edge_detector3.in = button_cond3.out;
+      button_cond4.in = button_start;
+      edge_detector4.in = button_cond4.out;
+      //
+      if (!edge_detector3.out){
+    
+        if(round_number==0){
+          fd.d = 0;
+          sd.d = 0;
+          dd.d = 0;     
+        }
+        
+      
+        if(round_number==1){ // if its in the first round
+          if (edge_detector.out){            
+              if (fd.q == 9)        
+                fd.d = 0;
+              else{          
+                fd.d = fd.q + 1;         
+              }
+          }
+          if (edge_detector2.out){
+             if (sd.q == 9)        
+                sd.d = 0;
+             else{          
+                sd.d = sd.q + 1;
+              }
+          }
+      }
+      else{ //if its not in the first round 
+          if (edge_detector.out){
+            if(sd.q<=7){
+                sd.d = sd.q + 2;               
+            }
+            if(fd.q!=9&sd.q==8){
+              fd.d = fd.q + 1;
+              sd.d = 0;
+            }
+            if(fd.q!=9&sd.q==9){
+              fd.d = fd.q + 1;
+              sd.d = 1;
+            }
+          }
+          if (edge_detector2.out){ 
+            if(sd.q>=2){
+               sd.d = sd.q - 2;              
+            }
+            if(fd.q!=0&sd.q==0){
+                 fd.d = fd.q -1;
+                 sd.d = 8;                       
+               }
+            if(fd.q!=0&sd.q==1){
+              fd.d = fd.q - 1;
+              sd.d = 9; 
+            }
+          }          
+  }out = fd.q*10 + sd.q;
+}
+  else{ //if confirmed finish prompting in
+        if(dd.q>1){
+          dd.d=0;
+      }
+          dd.d = dd.q+1;
+      
+        }
+}
+}
+  
+
